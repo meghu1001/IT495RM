@@ -1,0 +1,14 @@
+\documentclass{article}
+
+\begin{document}
+\SweaveOpts{concordance=TRUE}
+<<>>=
+library("rvest")
+ebola <- html("http://en.wikipedia.org/wiki/Ebola_virus_epidemic_in_West_Africa")
+ebola.df <- html_table(html_nodes(ebola, "table")[[2]])
+@
+"The World Health Organization (WHO) and respective governments have reported a total of \Sexpr{(ebola.df$Cases[10])} suspected cases and \Sexpr{(ebola.df$Deaths[10])} deaths, though the WHO believes that this substantially understates the magnitude of the outbreak. In the United States there has been \Sexpr{(ebola.df$Cases[6])} reported cases and \Sexpr{(ebola.df$Deaths[6])} deaths.
+
+
+
+\end{document}
