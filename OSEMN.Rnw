@@ -1,0 +1,377 @@
+\documentclass{article}
+
+\begin{document}
+\lstset{breaklines=true}
+<<echo=FALSE>>=
+render_listings()
+@
+
+\title{Do movies with large number of rating receive higher/lower ratings than those with a small number of ratings?}
+\author{Meghana Vuppu 
+mvuppu@ilstu.edu}
+\date{04/20/2015}
+\maketitle
+
+\section{Introduction}
+ Movies are one of the most important and prefered forms of entertainment today. Viewers/Audience make choices as in which movie to watch depending on the reviews.Reviews/ratings started playing such a crucial role that the audience pick/drop a movie based on them. In such a scenario,many web apps and websites have come up showing ratings of movies from time to time.
+        Rotten Tomatoes is one such API which displays ratings of various categories of movies depending on various criteria like moviegoers,critics etc.It uses various measurment tactics like tomatometer,critics consensus etc.It works with Films as well as Tv series and provides reviews for the same.
+        In this report a category of drama movies is taken and OSEMN approach is applied where the data is obtained,scrubbed,expored and the results are displayed in a graphical form for the users.
+\section{Data}
+  \subsection{Obtain Data}
+  In this tutorial, we shall be using the Rotten Tomatoes API to retrieve data that will be used throughout this tutorial. The steps below are short and simple; easy to follow and replicate. The most important entities needed to obtain data from the Rotten Tomatoes API will be the URL, and a R package called "rvest". 
+<<obtaindata, echo=TRUE, eval=FALSE, warning=FALSE>>=
+tablenum <- 3;
+url <- rvest::html("http://www.rottentomatoes.com/top/bestofrt/?category=9")
+drama.m <- rvest::html_table(rvest::html_nodes(url,"table")[[tablenum]])
+drama.m <- as.data.frame(drama.m)
+top_drama <- write.csv(drama.m, file="obtainData.csv")
+@
+The above R code is a simple way to obtain the data you need from the API. Line 1 to 3 uses a reference number to a table in the data source to retrieves data from the API. In the above code, we want to retrieve table number 3 when accessing the API. The rvest package will help with referencing the exact table we need and pulling data from the data source via the API.
+\par
+The last two lines simply creates a dataframe object that will hold the data retrieved from the Rotten Tomato API. The dataframe object will be saved in as a csv file called "obtainData.csv". We shall access the files in later part of the tutorial. 
+  \subsection{Scrub Data}
+    This section describes scrubbing the data where the data file which is in the .csv is read to remove redundencies .
+    \subsubsection{Scrub Data- read csv file}
+<<Scrub.read, echo=TRUE, eval=FALSE, warning=FALSE>>=
+readFile <- read.csv("obtainData.csv") 
+@
+   The file is already obtained in Step1 but read here in the Scrubbing step.
+
+    \subsubsection{Scrub Data- Select column}
+<<Scrub.columnSelect, echo=TRUE, eval=FALSE, warning=FALSE>>=
+readFile.rank <- readFile[,"Rank"] #integer
+readFile.ratings <- readFile[,"RatingTomatometer"] #factor
+readFile.title <- readFile[,"Title"] #factor
+readFile.reviews <- readFile[,"No..of.Reviews"] #integer
+
+@
+  There are various coloumns in the data obtained like Rank,Ratings,Title,Reviews. These are all like various attributes to the data obtained. However we need to scrub the data to change the format of each attribute or coloumn. For this we need to select the coloumn first which is done in the above steps.
+
+    \subsubsection{Scrub Data- Change format}
+<<Scrub.format, echo=TRUE, eval=FALSE, warning=FALSE>>=
+rank.Num <- as.numeric(readFile.rank) #numeric
+ratings.gsub <- gsub(pattern="%", replacement="", x=readFile.ratings) #character
+ratings.Num <- as.numeric(ratings.gsub)
+title.Char <- as.character(readFile.title) #character
+reviews.Num <- as.numeric(readFile.reviews) #numeric
+
+@
+ After selecting the coloumns,we need to change the format accordingly for which we use "as.numeric" for the "Rank" coloumn to convert it from integer to numeric. For the "Ratings" coloumn we use "gsub"command which converts factor into character.Similarly we use "as.character" for "Title" column to convert it from factor to character and "as.numeric" for "Reviews" to convert it from integer to numeric.
+ 
+
+    \subsubsection{Scrub Data- Order table column by Reviews}
+<<Scrub.order, echo=TRUE, eval=FALSE, warning=FALSE>>=
+movies.df <- data.frame(reviews.Num, title.Char, ratings.Num, rank.Num)
+movies.df$Title <- as.character(movies.df$Title) #reformat Title column
+movies.dfNew <- movies.df[order(movies.df$Reviews),] #dataframe ordered version
+@
+  After changing the format of the coloumn,we need to order the table by reviews as our criteria to evaluate the given question is whether movies with higher reviews have higher ratings or movies with lower reviews have higher ratings. For this we create a dataframe with the changed formats for a precise idea with reviews.Num,title.Char,ratings.Num,rank.Num.
+  
+  \subsubsection{Scrub Data- Select top 10 and bottom 10 Reviews}
+<<Scrub.10Reviews, echo=TRUE, eval=FALSE, warning=FALSE>>=
+movies.dfNew_LOW <- movies.dfNew[1:10,]
+movies.dfNew_HIGHER <- movies.dfNew[91:100,]
+@
+ In the obtained data we have 100 different data values for reviews. Hence we select the first 10 and the last 10 reviews. We create a code chunk, two different dataframes for top 10 reviews and least 10 reviews.
+ 
+  \subsubsection{Scrub Data- Explore column}
+<<Scrub.Explore, echo=TRUE, eval=FALSE, warning=FALSE>>=
+> names(movies.dfNew_LOW)
+[1] "Reviews" "Title"   "Ratings" "Rank"   
+> names(movies.dfNew_HIGHER)
+[1] "Reviews" "Title"   "Ratings" "Rank"   
+> class(movies.dfNew_LOW$Reviews)
+[1] "numeric"
+> class(movies.dfNew_LOW$Title)
+[1] "character"
+> class(movies.dfNew_LOW$Ratings)
+[1] "numeric"
+> class(movies.dfNew_LOW$Rank)
+[1] "numeric"
+> class(movies.dfNew_LOW)
+[1] "data.frame"
+> class(movies.dfNew_HIGHER$Reviews)
+[1] "numeric"
+> class(movies.dfNew_HIGHER$Title)
+[1] "character"
+> class(movies.dfNew_HIGHER$Ratings)
+[1] "numeric"
+> class(movies.dfNew_HIGHER$Rank)
+[1] "numeric"
+> class(movies.dfNew_HIGHER)
+[1] "data.frame"
+> str(movies.dfNew_LOW)
+'data.frame':  10 obs. of  4 variables:
+ $ Reviews: num  40 40 40 40 41 41 41 41 42 42
+ $ Title  : chr  "The Wages of Fear (1953)" "All Quiet on the Western Front (1930)" "Three Colors: Blue (Trois Couleurs: Bleu) (1993)" "The Hustler (1961)" ...
+ $ Ratings: num  100 98 100 98 100 100 98 100 100 100
+ $ Rank   : num  41 52 95 97 39 51 92 96 37 42
+> str(movies.dfNew_HIGHER)
+'data.frame':	10 obs. of  4 variables:
+ $ Reviews: num  247 251 259 264 275 285 288 300 305 306
+ $ Title  : chr  "The Lord of the Rings: The Two Towers (2002)" "The Hurt Locker (2009)" "True Grit (2010)" "Boyhood (2014)" ...
+ $ Ratings: num  96 98 96 98 98 96 96 96 97 96
+ $ Rank   : num  87 36 75 9 32 58 20 23 7 46
+> summary(movies.dfNew_LOW)
+    Reviews        Title              Ratings           Rank      
+ Min.   :40.0   Length:10          Min.   : 98.0   Min.   :37.00  
+ 1st Qu.:40.0   Class :character   1st Qu.: 98.5   1st Qu.:41.25  
+ Median :41.0   Mode  :character   Median :100.0   Median :51.50  
+ Mean   :40.8                      Mean   : 99.4   Mean   :64.20  
+ 3rd Qu.:41.0                      3rd Qu.:100.0   3rd Qu.:94.25  
+ Max.   :42.0                      Max.   :100.0   Max.   :97.00  
+> summary(movies.dfNew_HIGHER)
+    Reviews         Title              Ratings           Rank      
+ Min.   :247.0   Length:10          Min.   :96.00   Min.   : 7.00  
+ 1st Qu.:260.2   Class :character   1st Qu.:96.00   1st Qu.:20.75  
+ Median :280.0   Mode  :character   Median :96.00   Median :34.00  
+ Mean   :278.0                      Mean   :96.70   Mean   :39.30  
+ 3rd Qu.:297.0                      3rd Qu.:97.75   3rd Qu.:55.00  
+ Max.   :306.0                      Max.   :98.00   Max.   :87.00 
+@
+
+As a part of exploring the data,we create a new chunk and write codes for rearranging coloumns in the order "reviews","ratings","title","rank".
+Then we give commands to append and display the format of each coloumn from the data.
+Then we use "str" which is used to print the structure of an R object.It explains we have 10 observations with 4 variables.
+We use the "summary" command to give a brief description of our data in each coloumn.It also provides statistics of each variable seperately.
+
+\section{Result}
+  In this section we interpret our results by using a table and  a graph.
+  \subsection{Table}
+<<table, echo=FALSE, eval=TRUE>>=
+#Obtain data
+tablenum <- 3;
+url <- rvest::html("http://www.rottentomatoes.com/top/bestofrt/?category=9")
+drama.m <- rvest::html_table(rvest::html_nodes(url,"table")[[tablenum]])
+drama.m <- as.data.frame(drama.m)
+top_drama <- write.csv(drama.m, file="obtainData.csv")
+
+#Scrub data- read
+readFile <- read.csv("obtainData.csv") 
+
+#Scrub data- select column
+readFile.rank <- readFile[,"Rank"] #integer
+rank.Num <- as.numeric(readFile.rank) #numeric
+
+readFile.ratings <- readFile[,"RatingTomatometer"] #factor
+ratings.gsub <- gsub(pattern="%", replacement="", x=readFile.ratings) #character
+ratings.Num <- as.numeric(ratings.gsub)
+
+readFile.title <- readFile[,"Title"] #factor
+title.Char <- as.character(readFile.title) #character
+
+readFile.reviews <- readFile[,"No..of.Reviews"] #integer
+reviews.Num <- as.numeric(readFile.reviews) #numeric
+
+movies.df <- data.frame(reviews.Num, title.Char, ratings.Num, rank.Num)
+names(movies.df) <- c("Reviews", "Title", "Ratings", "Rank") #rename column
+
+movies.df$Title <- as.character(movies.df$Title) #reformat Title column
+
+#More Exploring- order reviews column
+movies.dfNew <- movies.df[order(movies.df$Reviews),] #dataframe ordered version
+
+#More Exploring- select and create two dataframes for top ten reviews and bottom ten reviews
+movies.dfNew_LOW <- movies.dfNew[1:10,]
+movies.dfNew_HIGHER <- movies.dfNew[91:100,]
+
+#Results
+#Results- Total Rating
+lowRating.Sum <- sum(movies.dfNew_LOW$Ratings)
+highRating.Sum <- sum(movies.dfNew_HIGHER$Ratings)
+
+#Results- table creation
+vectLow <- c("Low Reviews", lowRating.Sum)
+vectHigh <- c("High Reviews", highRating.Sum)
+dataframeObject <- rbind(vectLow, vectHigh)
+dataframeObject <- as.data.frame(dataframeObject)
+
+
+#Results- Column and Row rename
+row.names(dataframeObject) <- c(1,2)
+names(dataframeObject) <- c("Type", "Total.Ratings")
+dataframeObject$Type <- as.character(dataframeObject$Type)
+dataframeObject$Total.Ratings <- as.numeric(as.character(dataframeObject$Total.Ratings))
+type1 <- dataframeObject[1,1]
+type2 <- dataframeObject[2,1]
+total1 <- dataframeObject[1,2]
+total2 <- dataframeObject[2,2]
+
+@
+\begin{table}[ht]
+\caption{\textbf{Rotten Tomato}} % title of Table
+\centering % used for centering table
+\begin{tabular}{c c} % centered columns (4 columns)
+\hline %inserts double horizontal lines
+Type & Total Ratings\\ [1ex] % inserts table
+%heading
+\hline\hline % inserts single horizontal line
+\Sexpr{type1} & \Sexpr{total1}\\ % inserting body of the table
+\Sexpr{type2} & \Sexpr{total2}\\ [1ex] % [1ex] adds vertical space
+\hline %inserts single line
+\end{tabular}
+\label{table:nonlin} % is used to refer this table in the text
+\end{table}
+ In this section we create a table which displays the "Type","Total Ratings" with sections "High reviews","Low reviews". The table displays that movies with low reviews have high ratings and movies with high reviews have low ratings.
+ 
+\newpage
+\subsection{Graph}
+<<graph.1, echo=FALSE, eval=TRUE>>=
+#Obtain data
+tablenum <- 3;
+url <- rvest::html("http://www.rottentomatoes.com/top/bestofrt/?category=9")
+drama.m <- rvest::html_table(rvest::html_nodes(url,"table")[[tablenum]])
+drama.m <- as.data.frame(drama.m)
+top_drama <- write.csv(drama.m, file="obtainData.csv")
+
+#Scrub data- read
+readFile <- read.csv("obtainData.csv") 
+
+#Scrub data- select column
+readFile.rank <- readFile[,"Rank"] #integer
+rank.Num <- as.numeric(readFile.rank) #numeric
+
+readFile.ratings <- readFile[,"RatingTomatometer"] #factor
+ratings.gsub <- gsub(pattern="%", replacement="", x=readFile.ratings) #character
+ratings.Num <- as.numeric(ratings.gsub)
+
+readFile.title <- readFile[,"Title"] #factor
+title.Char <- as.character(readFile.title) #character
+
+readFile.reviews <- readFile[,"No..of.Reviews"] #integer
+reviews.Num <- as.numeric(readFile.reviews) #numeric
+
+movies.df <- data.frame(reviews.Num, title.Char, ratings.Num, rank.Num)
+names(movies.df) <- c("Reviews", "Title", "Ratings", "Rank") #rename column
+
+movies.df$Title <- as.character(movies.df$Title) #reformat Title column
+
+#More Exploring- order reviews column
+movies.dfNew <- movies.df[order(movies.df$Reviews),] #dataframe ordered version
+
+#More Exploring- select and create two dataframes for top ten reviews and bottom ten reviews
+movies.dfNew_LOW <- movies.dfNew[1:10,]
+movies.dfNew_HIGHER <- movies.dfNew[91:100,]
+
+#Results
+#Results- Total Rating
+lowRating.Sum <- sum(movies.dfNew_LOW$Ratings)
+highRating.Sum <- sum(movies.dfNew_HIGHER$Ratings)
+
+#Results- table creation
+vectLow <- c("Low Reviews", lowRating.Sum)
+vectHigh <- c("High Reviews", highRating.Sum)
+dataframeObject <- rbind(vectLow, vectHigh)
+dataframeObject <- as.data.frame(dataframeObject)
+
+
+#Results- Column and Row rename
+row.names(dataframeObject) <- c(1,2)
+names(dataframeObject) <- c("Type", "Total.Ratings")
+dataframeObject$Type <- as.character(dataframeObject$Type)
+dataframeObject$Total.Ratings <- as.numeric(as.character(dataframeObject$Total.Ratings))
+type1 <- dataframeObject[1,1]
+type2 <- dataframeObject[2,1]
+total1 <- dataframeObject[1,2]
+total2 <- dataframeObject[2,2]
+
+library(ggplot2)
+typeFact <- factor(c(type1,type2), levels=c("Low Reviews","High Reviews"))
+dat <- data.frame(
+  type = typeFact,
+  total_ratings = c(total1, total2)
+)
+p1 <- ggplot(data=dat, aes(x=type, y=total_ratings, fill=type)) +
+  geom_bar(stat="identity")
+
+p2 <- ggplot(data=dat, aes(x=type, y=total_ratings, group=1)) + 
+  geom_line(colour="red", linetype="dashed", size=1.5) + 
+  geom_point(colour="red", size=4, shape=21, fill="white")
+
+print(p1)
+@
+
+Here the results are displayed in a graph. We use the ggplot2 package to create a graph. This graph plots two variables("Low reviews","High reviews" )on the same axis and named "Type". Similarly "Total ratings " on the Y axis. The low review is plotted at 994 and high review is plotted at 967.
+
+<<graph.2, echo=FALSE, eval=TRUE>>=
+#Obtain data
+tablenum <- 3;
+url <- rvest::html("http://www.rottentomatoes.com/top/bestofrt/?category=9")
+drama.m <- rvest::html_table(rvest::html_nodes(url,"table")[[tablenum]])
+drama.m <- as.data.frame(drama.m)
+top_drama <- write.csv(drama.m, file="obtainData.csv")
+
+#Scrub data- read
+readFile <- read.csv("obtainData.csv") 
+
+#Scrub data- select column
+readFile.rank <- readFile[,"Rank"] #integer
+rank.Num <- as.numeric(readFile.rank) #numeric
+
+readFile.ratings <- readFile[,"RatingTomatometer"] #factor
+ratings.gsub <- gsub(pattern="%", replacement="", x=readFile.ratings) #character
+ratings.Num <- as.numeric(ratings.gsub)
+
+readFile.title <- readFile[,"Title"] #factor
+title.Char <- as.character(readFile.title) #character
+
+readFile.reviews <- readFile[,"No..of.Reviews"] #integer
+reviews.Num <- as.numeric(readFile.reviews) #numeric
+
+movies.df <- data.frame(reviews.Num, title.Char, ratings.Num, rank.Num)
+names(movies.df) <- c("Reviews", "Title", "Ratings", "Rank") #rename column
+
+movies.df$Title <- as.character(movies.df$Title) #reformat Title column
+
+#More Exploring- order reviews column
+movies.dfNew <- movies.df[order(movies.df$Reviews),] #dataframe ordered version
+
+#More Exploring- select and create two dataframes for top ten reviews and bottom ten reviews
+movies.dfNew_LOW <- movies.dfNew[1:10,]
+movies.dfNew_HIGHER <- movies.dfNew[91:100,]
+
+#Results
+#Results- Total Rating
+lowRating.Sum <- sum(movies.dfNew_LOW$Ratings)
+highRating.Sum <- sum(movies.dfNew_HIGHER$Ratings)
+
+#Results- table creation
+vectLow <- c("Low Reviews", lowRating.Sum)
+vectHigh <- c("High Reviews", highRating.Sum)
+dataframeObject <- rbind(vectLow, vectHigh)
+dataframeObject <- as.data.frame(dataframeObject)
+
+
+#Results- Column and Row rename
+row.names(dataframeObject) <- c(1,2)
+names(dataframeObject) <- c("Type", "Total.Ratings")
+dataframeObject$Type <- as.character(dataframeObject$Type)
+dataframeObject$Total.Ratings <- as.numeric(as.character(dataframeObject$Total.Ratings))
+type1 <- dataframeObject[1,1]
+type2 <- dataframeObject[2,1]
+total1 <- dataframeObject[1,2]
+total2 <- dataframeObject[2,2]
+
+library(ggplot2)
+typeFact <- factor(c(type1,type2), levels=c("Low Reviews","High Reviews"))
+dat <- data.frame(
+  type = typeFact,
+  total_ratings = c(total1, total2)
+)
+p1 <- ggplot(data=dat, aes(x=type, y=total_ratings, fill=type)) +
+  geom_bar(stat="identity")
+
+p2 <- ggplot(data=dat, aes(x=type, y=total_ratings, group=1)) + 
+  geom_line(colour="red", linetype="dashed", size=1.5) + 
+  geom_point(colour="red", size=4, shape=21, fill="white")
+
+print(p2)
+@
+ Here we use a line graph to plot our results. It is clear from our results that movies with HIGHER REVIEWS HAVE LOWER RATINGS AND MOVIES WITH LOWER REVIEWS HAVE HIGHER RATINGS.
+ 
+ 
+ 
+ \section{Conclusion}
+   In this report,we have used Rotten Tomatoes API . We have Obtained the data from the webpage. From the diffrent categories of data avaliable we have choosen Top 100 movies which belong to the "Drama" genre.Then we have scrubbe dthe data by renaming the coloumns,changing the format,reaaranging the coloumns. Then we get a new table with reaaranged and cleant data.Now we select the top 10 movies with high reviews and bottom 10 reviews with low reviews and calculate their mean. As a part of the results section,we plot a table showing the ratings and reviews.We plot two graphs using ggplot2 which clearly show that movies with higher reviews have lower ratings and movies with lower reviews have higher ratings. 
+
+\end{document}
